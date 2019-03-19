@@ -5,9 +5,9 @@ require "secp256k1"
 require "securerandom"
 
 module Ckb
-  UNLOCK_SCRIPT = File.read(File.expand_path("../../../scripts/udt/unlock.rb", __FILE__))
-  UNLOCK_SINGLE_CELL_SCRIPT = File.read(File.expand_path("../../../scripts/udt/unlock_single_cell.rb", __FILE__))
-  CONTRACT_SCRIPT = File.read(File.expand_path("../../../scripts/udt/contract.rb", __FILE__))
+  UNLOCK_SCRIPT = File.read(File.expand_path("../../../scripts/udt_with_lock/unlock.rb", __FILE__))
+  UNLOCK_SINGLE_CELL_SCRIPT = File.read(File.expand_path("../../../scripts/udt_with_lock/unlock_single_cell.rb", __FILE__))
+  CONTRACT_SCRIPT = File.read(File.expand_path("../../../scripts/udt_with_lock/contract.rb", __FILE__))
   FIXED_AMOUNT_GENESIS_UNLOCK_SCRIPT = File.read(File.expand_path("../../../scripts/fixed_amount_udt/genesis_unlock.rb", __FILE__))
   FIXED_AMOUNT_CONTRACT_SCRIPT = File.read(File.expand_path("../../../scripts/fixed_amount_udt/contract.rb", __FILE__))
 
@@ -283,7 +283,7 @@ module Ckb
       if i.amounts > amount
         outputs << {
           capacity: i.capacities,
-          data: [i.amounts - amount].pack("Q<"),
+          data: [i.amounts - amount, 0].pack("Q<C"),
           lock: address,
           type: token_info.contract_script_json_object
         }
@@ -332,7 +332,7 @@ module Ckb
       outputs = [
         {
           capacity: total_capacity,
-          data: [total_amount].pack("Q<"),
+          data: [total_amount, 0].pack("Q<C"),
           lock: wallet.udt_cell_wallet(token_info).address,
           type: token_info.contract_script_json_object
         }
@@ -350,7 +350,7 @@ module Ckb
     def generate_output(udt_address, amount, capacity)
       output = {
         capacity: capacity,
-        data: [amount].pack("Q<"),
+        data: [amount, 0].pack("Q<C"),
         lock: udt_address,
         type: token_info.contract_script_json_object
       }
@@ -435,13 +435,13 @@ module Ckb
       outputs = [
         {
           capacity: cell[:capacity],
-          data: [cell[:amount] - amount].pack("Q<"),
+          data: [cell[:amount] - amount, 0].pack("Q<C"),
           lock: address,
           type: token_info.contract_script_json_object
         },
         {
           capacity: target_cell[:capacity],
-          data: [target_cell[:amount] + amount].pack("Q<"),
+          data: [target_cell[:amount] + amount, 0].pack("Q<C"),
           lock: target_cell[:lock],
           type: token_info.contract_script_json_object
         }

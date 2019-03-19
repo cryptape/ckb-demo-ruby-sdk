@@ -300,7 +300,7 @@ module Ckb
       i = gather_inputs(capacity, MIN_UDT_CELL_CAPACITY)
       input_capacities = i.capacities
 
-      data = [tokens].pack("Q<")
+      data = [tokens, 0].pack("Q<C")
       s = Ckb::Blake2b.new
       s.update(Ckb::Utils.hex_to_bin(wallet.contract_type_hash))
       s.update(data)

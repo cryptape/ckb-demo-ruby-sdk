@@ -159,7 +159,7 @@ Now we can perform normal transfers between wallets:
 => 87655
 ```
 
-### User defined token
+### User defined token with lock
 
 We can also create user defined token that's separate from CKB. A new user defined token is made of 2 parts:
 
@@ -202,8 +202,8 @@ Notice CKB is flexible to implement many other types of transaction for this pro
 The following code fulfills this step:
 
 ```bash
-[15] pry(main)> # Alice is paying 10999 CKB capacities for 12345 token 1, alice will also spare 3010 CKB capacities to hold the returned token 1.
-[15] pry(main)> partial_tx = alice_token1.generate_partial_tx_for_udt_cell(12345, 3010, 10999)
+[15] pry(main)> # Alice is paying 10999 CKB capacities for 12345 token 1, alice will also spare 4104 CKB capacities to hold the returned token 1.
+[15] pry(main)> partial_tx = alice_token1.generate_partial_tx_for_udt_cell(12345, 4104, 10999)
 [18] pry(main)> bob_token1.send_amount(12345, partial_tx)
 [19] pry(main)> bob_token1.get_balance
 => 9987655
