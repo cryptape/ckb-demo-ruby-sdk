@@ -211,6 +211,40 @@ The following code fulfills this step:
 => 12345
 ```
 
+#### Deposit
+
+Now bob could deposit 5000 token
+
+```bash
+[9] pry(main)> bob.get_balance
+=> 990000
+pry(main)> bob_token1.deposit(5000, 5000)
+=> "0x70fa60737916afba3c8b8a2e7e9a6e8fe8514a1a96658f0e659aa2c4f834ca47"
+[10] pry(main)> bob_token1.get_balance
+=> 9995000
+[11] pry(main)> bob_token1.get_deposit
+=> 5000
+```
+
+We can get all the cells belong to bob.
+
+```
+[13] pry(main)> bob_token1.get_unspent_cells_including_deposit
+=> [{:capacity=>4104,
+  :lock=>"0x7b1f6486ce8fddeae8e5242f9332b7bbb5a595421a445951269aa1beb5d74b81",
+  :out_point=>{:hash=>"0x70fa60737916afba3c8b8a2e7e9a6e8fe8514a1a96658f0e659aa2c4f834ca47", :index=>0},
+  :amount=>5000,
+  :status=>1},
+ {:capacity=>5896,
+  :lock=>"0x7b1f6486ce8fddeae8e5242f9332b7bbb5a595421a445951269aa1beb5d74b81",
+  :out_point=>{:hash=>"0x70fa60737916afba3c8b8a2e7e9a6e8fe8514a1a96658f0e659aa2c4f834ca47", :index=>1},
+  :amount=>9995000,
+  :status=>0}]
+```
+We could see that bob owns 5000 tokens in stauts 1 (indicated it's locked), and 9995000 tokens in status 0.
+
+Note: now this's just the draft implementation. The locked token capacity is just detached from the origin token. So please keep the origin token has enough capacity. Later we should provide a method to fill the locked token in some vacant cells.
+
 ### User Defined Token which uses only one cell per wallet:
 
 ```bash

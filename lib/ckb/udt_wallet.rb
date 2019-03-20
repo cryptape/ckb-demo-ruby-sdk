@@ -227,7 +227,7 @@ module Ckb
       Ckb::Utils.extract_pubkey_bin(privkey)
     end
 
-    def get_unspent_cells
+    def get_unspent_cells_including_deposit
       hash = unlock_type_hash
       to = api.get_tip_number
       results = []
@@ -239,19 +239,80 @@ module Ckb
           cell[:lock] == address
         end.map do |cell|
           tx = get_transaction(cell[:out_point][:hash])
-          amount = Ckb::Utils.hex_to_bin(tx[:outputs][cell[:out_point][:index]][:data]).unpack("Q<")[0]
-          cell.merge(amount: amount)
+          amount, status = Ckb::Utils.hex_to_bin(tx[:outputs][cell[:out_point][:index]][:data]).unpack("Q<C")
+          cell.merge(amount: amount, status: status)
         end
         results.concat(cells_with_data)
         current_from = current_to + 1
       end
       results
     end
+
+    def get_unspent_cells
+      get_unspent_cells_including_deposit.select{ |c| c[:status] == 0 }
+    end
   end
 
   class UdtWallet < UdtBaseWallet
     def get_balance
       get_unspent_cells.map { |c| c[:amount] }.reduce(0, &:+)
+    end
+
+    def get_deposit
+      get_unspent_cells_including_deposit.select{ |c| c[:status] == 1 }.map { |c| c[:amount] }.reduce(0, &:+)
+    end
+
+    def deposit(amount, capacity)
+      output = {
+        capacity: capacity,
+        data: [amount, 1].pack("Q<C"),
+        lock: self.address,
+        type: self.token_info.contract_script_json_object
+      }
+
+      outputs = []
+
+      min_capacity = Ckb::Utils.calculate_cell_min_capacity(output)
+      if capacity < min_capacity
+        raise "Capacity is not enough to hold the whole cell, minimal capacity: #{min_capacity}"
+      end
+
+      output[:capacity] = min_capacity;
+      outputs << output
+      i = gather_inputs(amount)
+
+      input_capacities = i.capacities
+      output_capacities = output[:capacity]
+
+      # If there's more input capacities than output capacities, collect them
+      spare_cell_capacity = input_capacities - output_capacities
+      if i.amounts > amount
+        output = {
+          capacity: i.capacities - output_capacities,
+          data: [i.amounts - amount, 0].pack("Q<C"),
+          lock: self.address,
+          type: self.token_info.contract_script_json_object
+        }
+
+        min_capacity = Ckb::Utils.calculate_cell_min_capacity(output)
+
+        if i.capacities - output_capacities > min_capacity
+          outputs << output
+        else
+          raise "unimplemented, need more capacity."
+        end
+      else
+        raise "not enought token amount"
+      end
+
+      inputs = Ckb::Utils.sign_sighash_all_inputs(i.inputs, outputs, privkey)
+      tx = {
+        version: 0,
+        deps: [api.mruby_out_point],
+        inputs: inputs,
+        outputs: outputs
+      }
+      api.send_transaction(tx)
     end
 
     # Generate a partial tx which provides CKB coins in exchange for UDT tokens.
