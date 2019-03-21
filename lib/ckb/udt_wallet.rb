@@ -248,6 +248,10 @@ module Ckb
       results
     end
 
+    def deposit_cells
+      get_unspent_cells_including_deposit.select{ |c| c[:status] == 1 }
+    end
+
     def get_unspent_cells
       get_unspent_cells_including_deposit.select{ |c| c[:status] == 0 }
     end
@@ -258,8 +262,8 @@ module Ckb
       get_unspent_cells.map { |c| c[:amount] }.reduce(0, &:+)
     end
 
-    def get_deposit
-      get_unspent_cells_including_deposit.select{ |c| c[:status] == 1 }.map { |c| c[:amount] }.reduce(0, &:+)
+    def get_deposit_balance
+      deposit_cells.map { |c| c[:amount] }.reduce(0, &:+)
     end
 
     def deposit(amount, capacity)
@@ -311,6 +315,37 @@ module Ckb
         deps: [api.mruby_out_point],
         inputs: inputs,
         outputs: outputs
+      }
+      return tx
+      # api.send_transaction(tx)
+    end
+
+    def exit(deposit_cell)
+      input = {
+        previous_output: {
+          hash: deposit_cell[:out_point][:hash],
+          index: deposit_cell[:out_point][:index]
+        },
+        unlock: self.token_info.unlock_script_json_object(self.pubkey)
+      }
+
+      output = {
+        capacity: deposit_cell[:capacity],
+        data: [deposit_cell[:amount], 0].pack("Q<C"),
+        lock: self.address,
+        type: self.token_info.contract_script_json_object
+      }
+
+      # supermode, exit
+      output[:type].merge!({args: ["", ""]})
+
+      inputs = Ckb::Utils.sign_sighash_all_inputs([input], [output], self.privkey)
+
+      tx = {
+        version: 0,
+        deps: [api.mruby_out_point],
+        inputs: inputs,
+        outputs: [output]
       }
       api.send_transaction(tx)
     end

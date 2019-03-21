@@ -222,7 +222,7 @@ pry(main)> bob_token1.deposit(5000, 5000)
 => "0x70fa60737916afba3c8b8a2e7e9a6e8fe8514a1a96658f0e659aa2c4f834ca47"
 [10] pry(main)> bob_token1.get_balance
 => 9995000
-[11] pry(main)> bob_token1.get_deposit
+[11] pry(main)> bob_token1.get_deposit_balance
 => 5000
 ```
 
@@ -243,7 +243,32 @@ We can get all the cells belong to bob.
 ```
 We could see that bob owns 5000 tokens in stauts 1 (indicated it's locked), and 9995000 tokens in status 0.
 
-Note: now this's just the draft implementation. The locked token capacity is just detached from the origin token. So please keep the origin token has enough capacity. Later we should provide a method to fill the locked token in some vacant cells.
+Note: now this's just a draft implementation. The locked token capacity is just detached from the origin token. So please keep the origin token has enough capacity. Later we should provide a method to fill the locked token in some vacant cells.
+
+#### Exit
+
+User could exit the locked token.
+
+```
+[7] pry(main)> bob_token1.get_deposit_balance
+=> 5000
+[8] pry(main)> bob_token1.get_balance
+=> 9995000
+[9] pry(main)> deposit_cell = bob_token1.deposit_cells[0]
+=> {:capacity=>4104,
+ :lock=>"0x7b1f6486ce8fddeae8e5242f9332b7bbb5a595421a445951269aa1beb5d74b81",
+ :out_point=>{:hash=>"0x70fa60737916afba3c8b8a2e7e9a6e8fe8514a1a96658f0e659aa2c4f834ca47", :index=>0},
+ :amount=>5000,
+ :status=>1}
+[10] pry(main)> bob_token1.exit(deposit_cell)
+=> "0x5b00b11778c735d7e84e22b2003d247e0a5b6de0a0bbecf5af53d1c2ec61bb34"
+[11] pry(main)> bob_token1.get_balance
+=> 10000000
+[12] pry(main)> bob_token1.get_deposit_balance
+=> 0
+```
+
+Note: now this's just a draft implementation. The exit action should check the provied proof and should exit from part of locked tokens or multiple tokens.
 
 ### User Defined Token which uses only one cell per wallet:
 
