@@ -308,7 +308,7 @@ We have also designed a user defined token with a fixed upper cap. For this type
 [7] pry(main)> alice.udt_account_wallet(fixed_token_info).get_balance
 ```
 
-### Block submission
+### Block first submission
 
 ```bash
 [1] pry(main)> api = Ckb::Api.new
@@ -359,4 +359,54 @@ We have also designed a user defined token with a fixed upper cap. For this type
 => "0x00000000000000000000000000000000000000000000000000000000000000006afcc9af62d92f1695d3456cc2d818e38b5ccf92a6b7c907647da274722e44cea815710000000000"
 [13] pry(main)> Ckb::Utils.hex_to_bin(tx[:outputs][0][:data]).unpack("H64H64Q<")
 => ["0000000000000000000000000000000000000000000000000000000000000000", "6afcc9af62d92f1695d3456cc2d818e38b5ccf92a6b7c907647da274722e44ce", 7411112]
+```
+
+### Block submission
+
+```shell
+[1] pry(main)> api = Ckb::Api.new
+=> #<API@http://localhost:8114>
+[2] pry(main)> api.get_tip_number
+=> 5347
+[3] pry(main)> api.load_default_configuration!
+=> "0x00ccb858f841db7ece8833a77de158b84af4c8f43a69dbb0f43de87faabfde32"
+[4] pry(main)> bob = Ckb::Wallet.from_hex(api, "e79f3207ea4980b7fed79956d5934249ceac4751a4fae01a0f7c4a96884bc4e3")
+=> #<Ckb::Wallet:0x000055a32e99cdf8 @api=#<API@http://localhost:8114>, @privkey="\xE7\x9F2\a\xEAI\x80\xB7\xFE\xD7\x99V\xD5\x93BI\xCE\xACGQ\xA4\xFA\xE0\x1A\x0F|J\x96\x88K\xC4\xE3">
+[5] pry(main)> chain = Ckb::Chain::new(api, "plasma", Ckb::Utils.bin_to_hex(Ckb::Utils.extract_pubkey_bin(bob.privkey)))
+=> #<Ckb::Chain:0x000055a32e927c38 @api=#<API@http://localhost:8114>, @name="plasma", @pubkey="024a501efd328e062c8675f2365970728c859c592beeefd6be8ead3d901330bc01">
+[6] pry(main)> cells = bob.get_block_cells(chain)
+=> [{:capacity=>990000,
+  :lock=>"0x82e4b4bfb752e1ccd293be2e020f07dee6e792f27259c1c44f8f325eced42b68",
+  :out_point=>{:hash=>"0xa721c1c86ba6f0e8e834c56d8fd6a53a0ebd8d82840b8608a4c8647089481eb4", :index=>0},
+  :confirmed=>"0000000000000000000000000000000000000000000000000000000000000000",
+  :unconfirmed=>"51eb67b96f54f5263dcb102a3f532f9fdde9aa0c2aff4e4f42bda1ad1332081f",
+  :block_number=>7411111},
+ {:capacity=>1000000,
+  :lock=>"0x82e4b4bfb752e1ccd293be2e020f07dee6e792f27259c1c44f8f325eced42b68",
+  :out_point=>{:hash=>"0xb9578b4a2e1d6e809dc685c5355ebd0727a8fa5ad7d99d1fdaa54ab0db3c58aa", :index=>0},
+  :confirmed=>"0000000000000000000000000000000000000000000000000000000000000000",
+  :unconfirmed=>"6afcc9af62d92f1695d3456cc2d818e38b5ccf92a6b7c907647da274722e44ce",
+  :block_number=>7411112}]
+[7] pry(main)> cell = cells[1]
+=> {:capacity=>1000000,
+ :lock=>"0x82e4b4bfb752e1ccd293be2e020f07dee6e792f27259c1c44f8f325eced42b68",
+ :out_point=>{:hash=>"0xb9578b4a2e1d6e809dc685c5355ebd0727a8fa5ad7d99d1fdaa54ab0db3c58aa", :index=>0},
+ :confirmed=>"0000000000000000000000000000000000000000000000000000000000000000",
+ :unconfirmed=>"6afcc9af62d92f1695d3456cc2d818e38b5ccf92a6b7c907647da274722e44ce",
+ :block_number=>7411112}
+[8] pry(main)> bob.commit_block(chain, cell, 7411113, "f6193be4bccf7484967ce8002ce22459f62ff642fb11be26feea9b34b8382c63")
+=> "0xe9442ae2ce4f008cda6b06c138a98f2ca5e685e6df0ac43cee1023610bbb8f7c"
+[9] pry(main)> cells = bob.get_block_cells(chain)
+=> [{:capacity=>990000,
+  :lock=>"0x82e4b4bfb752e1ccd293be2e020f07dee6e792f27259c1c44f8f325eced42b68",
+  :out_point=>{:hash=>"0xa721c1c86ba6f0e8e834c56d8fd6a53a0ebd8d82840b8608a4c8647089481eb4", :index=>0},
+  :confirmed=>"0000000000000000000000000000000000000000000000000000000000000000",
+  :unconfirmed=>"51eb67b96f54f5263dcb102a3f532f9fdde9aa0c2aff4e4f42bda1ad1332081f",
+  :block_number=>7411111},
+ {:capacity=>1000000,
+  :lock=>"0x82e4b4bfb752e1ccd293be2e020f07dee6e792f27259c1c44f8f325eced42b68",
+  :out_point=>{:hash=>"0xe9442ae2ce4f008cda6b06c138a98f2ca5e685e6df0ac43cee1023610bbb8f7c", :index=>0},
+  :confirmed=>"6afcc9af62d92f1695d3456cc2d818e38b5ccf92a6b7c907647da274722e44ce",
+  :unconfirmed=>"f6193be4bccf7484967ce8002ce22459f62ff642fb11be26feea9b34b8382c63",
+  :block_number=>7411113}]
 ```

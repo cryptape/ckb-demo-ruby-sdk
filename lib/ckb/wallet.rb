@@ -207,8 +207,7 @@ module Ckb
     end
 
     # TODO refactor, move this part of code to chain
-    def commit_block(chain, block_number, block_hash)
-      # get unspent cell
+    def get_block_cells(chain)
       hash = Ckb::Utils.json_script_to_type_hash(chain.unlock_script_json_object(pubkey))
       to = api.get_tip_number
       results = []
@@ -224,45 +223,57 @@ module Ckb
         results.concat(cells_with_data)
         current_from = current_to + 1
       end
+      results
+    end
+
+    # TODO refactor, move this part of code to chain
+    def commit_block(chain, cell, block_number, block_hash)
+      if block_hash.start_with?("0x")
+        block_hash = block_hash[2..-1]
+      end
+
+      hash = Ckb::Utils.json_script_to_type_hash(chain.unlock_script_json_object(pubkey))
 
       inputs = []
 
-      cell = results[0]
-
-      if cell
-        if block_number != cell[:block_number] + 1
-          raise "block number is not matched, expected #{cell[:block_number] + 1}, but got #{block_number}"
-        end
-        input = {
-          previous_output: {
-            hash: cell[:out_point][:hash],
-            index: cell[:out_point][:index]
-          },
-          unlock: chain.unlock_script_json_object(pubkey)
-        }
-        inputs << input
-        input_capacities += cell[:capacity]
-  
-        output = {
-          capacity: input_capacities,
-          data: [cell[:block_number], block_hash, block_number].pack("H64H64Q<"),
-          lock: self.address,
-          type: self.chain.contract_script_json_object
-        }
-
-        outputs = [output]
-
-        inputs = Ckb::Utils.sign_sighash_all_inputs(inputs, outputs, privkey)
-        tx = {
-          version: 0,
-          deps: [api.mruby_out_point],
-          inputs: inputs,
-          outputs: outputs
-        }
-
-      else
-        raise "not found the previous cell"
+      if block_number != cell[:block_number] + 1
+        raise "block number is not matched, expected #{cell[:block_number] + 1}, but got #{block_number}"
       end
+      inputs << {
+        previous_output: {
+          hash: cell[:out_point][:hash],
+          index: cell[:out_point][:index]
+        },
+        unlock: chain.unlock_script_json_object(pubkey)
+      }
+      
+      outputs = []
+
+      outputs << {
+        capacity: cell[:capacity],
+        data: [cell[:unconfirmed], block_hash, block_number].pack("H64H64Q<"),
+        lock: hash,
+        type: chain.contract_script_json_object
+      }
+
+      s = Ckb::Blake2b.new
+      s.update(Ckb::Utils.hex_to_bin(chain.contract_type_hash))
+      s.update([cell[:confirmed], cell[:unconfirmed], cell[:block_number]].pack("H64H64Q<"))
+      outputs.map{|i| s.update(i[:data]) }
+      key = Secp256k1::PrivateKey.new(privkey: privkey)
+      signature = key.ecdsa_serialize(key.ecdsa_sign(s.digest, raw: true))
+      signature_hex = Ckb::Utils.bin_to_hex(signature)
+
+      outputs[0][:type].merge!({ args: [signature_hex] })
+
+      inputs = Ckb::Utils.sign_sighash_all_inputs(inputs, outputs, privkey)
+      tx = {
+        version: 0,
+        deps: [api.mruby_out_point],
+        inputs: inputs,
+        outputs: outputs
+      }
+      api.send_transaction(tx)
     end
 
     # Create a user defined token with fixed upper amount, subsequent invocations
