@@ -4,6 +4,7 @@ require_relative "udt_wallet"
 require_relative "utils"
 require_relative "version"
 require_relative "blake2b"
+require_relative 'chain'
 
 require "secp256k1"
 require "securerandom"
@@ -149,6 +150,119 @@ module Ckb
         hash: hash,
         index: 0
       }
+    end
+
+    # TODO refactor, move this part of code to chain
+    def commit_first_block(chain, block_number, block_hash, capacity)
+      i = gather_inputs(capacity, MIN_CELL_CAPACITY)
+      hash = Ckb::Utils.json_script_to_type_hash(chain.unlock_script_json_object(pubkey))
+      i = gather_inputs(capacity, 10000)
+
+      input_capacities = i.capacities
+
+      if block_hash.start_with?("0x")
+        block_hash = block_hash[2..-1]
+      end
+
+      cell = {
+        capacity: capacity,
+        data: ["0000000000000000000000000000000000000000000000000000000000000000", block_hash, block_number].pack("H64H64Q<"),
+        lock: hash,
+        type: chain.contract_script_json_object
+      }
+
+      needed_capacity = Ckb::Utils.calculate_cell_min_capacity(cell)
+
+      if input_capacities < needed_capacity
+        raise "Not enough capacity for account cell, needed: #{needed_capacity}"
+      end
+
+      s = Ckb::Blake2b.new
+      data = cell[:data]
+      s.update(Ckb::Utils.hex_to_bin(chain.contract_type_hash))
+      s.update(data)
+      key = Secp256k1::PrivateKey.new(privkey: privkey)
+      signature = key.ecdsa_serialize(key.ecdsa_sign(s.digest, raw: true))
+      signature_hex = Ckb::Utils.bin_to_hex(signature)
+
+      cell[:type].merge!({ args: [signature_hex] })
+
+      outputs = []
+      outputs << cell
+
+      outputs << {
+        capacity: input_capacities - capacity,
+        data: "",
+        lock: verify_type_hash
+      }
+
+      tx = {
+        version: 0,
+        deps: [api.mruby_out_point],
+        inputs: Ckb::Utils.sign_sighash_all_inputs(i.inputs, outputs, privkey),
+        outputs: outputs
+      }
+      
+      api.send_transaction(tx)
+    end
+
+    # TODO refactor, move this part of code to chain
+    def commit_block(chain, block_number, block_hash)
+      # get unspent cell
+      hash = Ckb::Utils.json_script_to_type_hash(chain.unlock_script_json_object(pubkey))
+      to = api.get_tip_number
+      results = []
+      current_from = 1
+      while current_from <= to
+        current_to = [current_from + 100, to].min
+        cells = api.get_cells_by_type_hash(hash, current_from, current_to)
+        cells_with_data = cells.map do |cell|
+          tx = get_transaction(cell[:out_point][:hash])
+          confirmed, unconfirmed, pre_block_number = Ckb::Utils.hex_to_bin(tx[:outputs][cell[:out_point][:index]][:data]).unpack("H64H64Q<")
+          cell.merge(confirmed: confirmed, unconfirmed: unconfirmed, block_number: pre_block_number)
+        end
+        results.concat(cells_with_data)
+        current_from = current_to + 1
+      end
+
+      inputs = []
+
+      cell = results[0]
+
+      if cell
+        if block_number != cell[:block_number] + 1
+          raise "block number is not matched, expected #{cell[:block_number] + 1}, but got #{block_number}"
+        end
+        input = {
+          previous_output: {
+            hash: cell[:out_point][:hash],
+            index: cell[:out_point][:index]
+          },
+          unlock: chain.unlock_script_json_object(pubkey)
+        }
+        inputs << input
+        input_capacities += cell[:capacity]
+  
+        output = {
+          capacity: input_capacities,
+          data: [cell[:block_number], block_hash, block_number].pack("H64H64Q<"),
+          lock: self.address,
+          type: self.chain.contract_script_json_object
+        }
+
+        outputs = [output]
+
+        inputs = Ckb::Utils.sign_sighash_all_inputs(inputs, outputs, privkey)
+        tx = {
+          version: 0,
+          deps: [api.mruby_out_point],
+          inputs: inputs,
+          outputs: outputs
+        }
+
+      else
+        raise "not found the previous cell"
+      end
     end
 
     # Create a user defined token with fixed upper amount, subsequent invocations

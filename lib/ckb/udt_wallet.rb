@@ -316,8 +316,7 @@ module Ckb
         inputs: inputs,
         outputs: outputs
       }
-      return tx
-      # api.send_transaction(tx)
+      api.send_transaction(tx)
     end
 
     def exit(deposit_cell)
