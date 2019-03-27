@@ -415,16 +415,22 @@ We have also designed a user defined token with a fixed upper cap. For this type
 
 1. check config, clean ckb data, start ckb
 
-```
+```shell
 rm nodes/default/db -rf
 target/release/ckb run
 target/release/ckb miner
 ```
 
-2. run deposit.rb
+2. deposit
 
 wait 10s, and then
 
-```ruby
+```shell
 ruby deposit.rb
+```
+
+3. exit
+
+```shell
+ruby exit.rb
 ```
