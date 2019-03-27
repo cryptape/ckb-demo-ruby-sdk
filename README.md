@@ -410,3 +410,21 @@ We have also designed a user defined token with a fixed upper cap. For this type
   :unconfirmed=>"f6193be4bccf7484967ce8002ce22459f62ff642fb11be26feea9b34b8382c63",
   :block_number=>7411113}]
 ```
+
+### Demo show
+
+1. check config, clean ckb data, start ckb
+
+```
+rm nodes/default/db -rf
+target/release/ckb run
+target/release/ckb miner
+```
+
+2. run deposit.rb
+
+wait 10s, and then
+
+```ruby
+ruby deposit.rb
+```
