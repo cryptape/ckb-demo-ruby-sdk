@@ -9,13 +9,10 @@ bob = Ckb::Wallet.from_hex(api, "e79f3207ea4980b7fed79956d5934249ceac4751a4fae01
 token_info = bob.created_token_info("Token 1")
 bob_token1 = bob.udt_wallet(token_info)
 
-p "Bob deposits 4000 tokens"
-
-bob_token1.deposit(4000, 5000)
-
-while bob_token1.get_deposit_balance != 4000
+while bob_token1.deposit_cells.empty?
     sleep 1
 end
 
-p "Success!"
-puts "\n\n"
+deposit_cell = bob_token1.deposit_cells[0]
+
+p deposit_cell[:amount]

@@ -413,7 +413,7 @@ We have also designed a user defined token with a fixed upper cap. For this type
 
 ### Demo show
 
-1. check config, clean ckb data, start ckb
+0. check config, clean ckb data, start ckb
 
 ```shell
 rm nodes/default/db -rf
@@ -421,16 +421,57 @@ target/release/ckb run
 target/release/ckb miner
 ```
 
+1. prepare: install mruby, transfer capacity, create udt-token
+
+```shell
+➜  ckb-demo-ruby-sdk git:(plasma) ✗ ruby prepare.rb
+"Install mruby contract"
+"waiting..."
+"Success!"
+
+
+"Bob's initial balance is 0"
+"ASW transfers 1000000 capacity"
+"waiting..."
+"Success!"
+
+
+"Bob creates UDT-Token"
+"waiting..."
+"Success!"
+
+```
+
 2. deposit
 
 wait 10s, and then
 
 ```shell
-ruby deposit.rb
+➜  ckb-demo-ruby-sdk git:(plasma) ✗ ruby deposit.rb
+"Bob deposits 4000 tokens"
+"Success!"
 ```
 
 3. exit
 
 ```shell
-ruby exit.rb
+➜  ckb-demo-ruby-sdk git:(plasma) ✗ ruby exit.rb   
+"bob_token1.get_deposit_balance: 4000"
+"bob_token1.get_balance: 9996000"
+
+
+"Deposit balance cell: {:capacity=>4104, :lock=>\"0x7b1f6486ce8fddeae8e5242f9332b7bbb5a595421a445951269aa1beb5d74b81\", :out_point=>{:hash=>\"0x44e9e7c5a5457bb520f7c33b42fad254bf82550a7422df0041aa26dc6ac23cd2\", :index=>0}, :amount=>4000, :status=>1}"
+
+
+"Bob exit the whole deposit balance"
+"waiting..."
+"Success!"
+"Now the deposit balance is 0, the balance is 10000000"
+```
+
+4. monitor deposit
+
+```shell
+➜  ckb-demo-ruby-sdk git:(plasma) ✗ ruby monitor.rb 
+4000
 ```

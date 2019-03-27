@@ -300,10 +300,12 @@ module Ckb
 
         min_capacity = Ckb::Utils.calculate_cell_min_capacity(output)
 
-        if i.capacities - output_capacities > min_capacity
-          outputs << output
-        else
-          raise "unimplemented, need more capacity."
+        if spare_cell_capacity > MIN_CELL_CAPACITY
+          outputs << {
+            capacity: spare_cell_capacity,
+            data: "",
+            lock: wallet.address
+          }
         end
       else
         raise "not enought token amount"
