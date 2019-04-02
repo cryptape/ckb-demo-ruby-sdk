@@ -300,6 +300,10 @@ module Ckb
 
         min_capacity = Ckb::Utils.calculate_cell_min_capacity(output)
 
+        output[:capacity] = min_capacity;
+        outputs << output
+        spare_cell_capacity = spare_cell_capacity - min_capacity
+
         if spare_cell_capacity > MIN_CELL_CAPACITY
           outputs << {
             capacity: spare_cell_capacity,

@@ -17,5 +17,9 @@ while bob_token1.get_deposit_balance != 4000
     sleep 1
 end
 
+p "bob_token1 deposit_balance: #{bob_token1.get_deposit_balance}"
+p "bob_token1 balance: #{bob_token1.get_balance}"
+p "bob balance: #{bob.get_balance}"
+
 p "Success!"
 puts "\n\n"
